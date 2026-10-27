@@ -131,8 +131,10 @@ export async function getBotById(uid, botId) {
   }
 
   const data = document.data();
+  const isOwner = data.ownerId === uid;
+  const isSystemOrchestrator = data.isSystem === true && data.ownerId === 'system' && data.ownerType === 'system' && data.role === 'orchestrator';
 
-  if (data.ownerId !== uid || data.isSystem === true) {
+  if (!isOwner && !isSystemOrchestrator) {
     throw createError('Бот не найден.', 'BOT_NOT_FOUND');
   }
 
