@@ -1,5 +1,6 @@
 services:
   chatify-bot-server:
+    image: chatify-bot-server:latest
     build:
       context: .
       dockerfile: Dockerfile
