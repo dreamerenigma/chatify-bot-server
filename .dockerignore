@@ -1,0 +1,15 @@
+node_modules/
+npm-debug.log
+
+.env
+.env.*
+!.env.example
+
+secrets/
+*.json.key
+*service-account*.json
+*firebase-adminsdk*.json
+
+.git/
+.DS_Store
+

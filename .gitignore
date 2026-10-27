@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+!.env.example
+
+secrets/
+service-account*.json
+chatify-6fdfb-firebase-adminsdk-pwlcz-3f90e6672e*.json
+
+npm-debug.log*
+.DS_Store

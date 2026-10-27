@@ -1,0 +1,15 @@
+services:
+  chatify-bot-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatify-bot-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/chatify-6fdfb-firebase-adminsdk-pwlcz-3f90e6672e.json
+    volumes:
+      - ./secrets/chatify-6fdfb-firebase-adminsdk-pwlcz-3f90e6672e.json:/run/secrets/chatify-6fdfb-firebase-adminsdk-pwlcz-3f90e6672e.json:ro
+    ports:
+      - "${PORT:-3000}:3000"
