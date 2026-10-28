@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../config/middleware/auth.js';
-import {getUserBots, getBotById, createBot, updateBot, deleteBot} from '../services/bot.service.js';
+import {getUserBots, getBotById, createBot, updateBot, deleteBot, addBotUser} from '../services/bot.service.js';
 
 const router = Router();
 
@@ -76,6 +76,20 @@ router.delete('/:botId', async (req, res) => {
   try {
     await deleteBot(req.user.uid, req.params.botId);
     return res.status(204).end();
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+/// -- Add user bot.
+router.post('/:botId/add-user', async (req, res) => {
+  try {
+    const bot = await addBotUser(req.user.uid, req.params.botId);
+
+    return res.json({
+      status: 'ok',
+      bot,
+    });
   } catch (error) {
     return handleError(error, res);
   }

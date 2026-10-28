@@ -131,8 +131,10 @@ export async function getBotById(uid, botId) {
   }
 
   const data = document.data();
+  const isOwner = data.ownerId === uid;
+  const isSystemOrchestrator = data.isSystem === true && data.ownerId === 'system' && data.ownerType === 'system' && data.role === 'orchestrator';
 
-  if (data.ownerId !== uid || data.isSystem === true) {
+  if (!isOwner && !isSystemOrchestrator) {
     throw createError('Бот не найден.', 'BOT_NOT_FOUND');
   }
 
@@ -162,6 +164,7 @@ export async function createBot(uid, input) {
     capabilities: ['messaging'],
     isActive: true,
     isVerified: false,
+    usersCount: 0,
     id: botRef.id,
     createdAt: FieldValue.serverTimestamp(),
   };
@@ -174,6 +177,44 @@ export async function createBot(uid, input) {
   await syncBotSearchIndex(bot);
 
   return bot;
+}
+
+export async function addBotUser(uid, botId) {
+  const botRef = bots.doc(botId);
+  const botUserRef = db.collection('BotUsers').doc(`${botId}_${uid}`);
+
+  await db.runTransaction(async (transaction) => {
+    const botDocument = await transaction.get(botRef);
+
+    if (!botDocument.exists) {
+      throw createError('Бот не найден.', 'BOT_NOT_FOUND');
+    }
+
+    const botData = botDocument.data();
+    
+    if (botData.isActive !== true) {
+      throw createError('Бот неактивен.', 'BOT_NOT_FOUND');
+    }
+
+    const botUserDocument = await transaction.get(botUserRef);
+
+    if (botUserDocument.exists) {
+      return;
+    }
+
+    transaction.create(botUserRef, {
+      botId,
+      userId: uid,
+      addedAt: FieldValue.serverTimestamp(),
+    });
+
+    transaction.update(botRef, {
+      usersCount: FieldValue.increment(1),
+    });
+  });
+
+  const updatedBot = await botRef.get();
+  return toBot(updatedBot);
 }
 
 export async function updateBot(uid, botId, input) {

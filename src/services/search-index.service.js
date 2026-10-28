@@ -20,7 +20,7 @@ function toSearchIndexEntry(bot) {
   };
 }
 
-/// -- Создаёт или обновляет запись в глобальном поисковом индексе.
+/// -- Creates or updates an entry in the global search index.
 export async function syncBotSearchIndex(bot) {
   if (!bot || typeof bot.id !== 'string' || !bot.id) {
     throw new Error('Для индексации необходим корректный bot.id.');
@@ -33,7 +33,7 @@ export async function syncBotSearchIndex(bot) {
   return entry;
 }
 
-/// -- Удаляет бота из глобального поискового индекса.
+/// -- Removes the bot from the global search index.
 export async function deleteBotSearchIndex(botId) {
   if (typeof botId !== 'string' || !botId) {
     throw new Error('Необходимо указать botId.');
@@ -42,7 +42,7 @@ export async function deleteBotSearchIndex(botId) {
   await searchIndex.doc(botId).delete();
 }
 
-/// -- Перестраивает индекс для всех существующих ботов.
+/// -- Rebuilds the index for all existing bots.
 export async function rebuildBotSearchIndex() {
   const snapshot = await bots.get();
   const existingBotIds = new Set(snapshot.docs.map((doc) => doc.id));
