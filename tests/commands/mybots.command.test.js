@@ -2,7 +2,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../../src/config/firebase.js';
-import { handleMyBotsCommand } from '../../src/commands/mybots.command.js';
+import { handleMyBotsCommand, handleMyBotMenu } from '../../src/commands/mybots.command.js';
 
 const fixtures = [];
 
@@ -82,5 +82,60 @@ test('handleMyBotsCommand returns only regular bots belonging to the user', asyn
   assert.deepEqual(
     buttons.map((button) => button.callbackData).sort(),
     buttons.map((button) => `mybot:${button.callbackData.split(':')[1]}`).sort()
+  );
+});
+
+test('handleMyBotMenu returns selected bot menu', async () => {
+  const userId = `user-${randomUUID()}`;
+
+  const botId = await createBotFixture({
+    name: 'Photo Cherry Bot',
+    username: 'photo_cherry_bot',
+    ownerId: userId,
+  });
+
+  const result = await handleMyBotMenu({
+    userId,
+    botId,
+  });
+
+  assert.equal(result.text, 'Photo Cherry Bot\n@PhotoCherryBot');
+
+  const buttons = result.metadata.keyboard.buttons;
+
+  assert.deepEqual(
+    buttons.map((button) => button.text),
+    [
+      'API Token',
+      'Edit Bot',
+      'Bot Settings',
+      'Payments',
+      'Transfer Ownership',
+      'Delete Bot',
+      '⬅ Back to Bot List',
+    ]
+  );
+
+  assert.equal(buttons[0].callbackData, `mybot:token:${botId}`);
+  assert.equal(buttons[1].callbackData, `mybot:edit:${botId}`);
+  assert.equal(buttons[6].callbackData, 'mybots');
+});
+
+test('handleMyBotMenu does not allow access to another user bot', async () => {
+  const ownerId = `user-${randomUUID()}`;
+  const anotherUserId = `user-${randomUUID()}`;
+
+  const botId = await createBotFixture({
+    name: 'Private Bot',
+    username: 'private_bot',
+    ownerId,
+  });
+
+  await assert.rejects(
+    () => handleMyBotMenu({
+      userId: anotherUserId,
+      botId,
+    }),
+    (error) => error.code === 'BOT_NOT_FOUND'
   );
 });

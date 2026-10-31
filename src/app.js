@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
-import healthRouter from './routes/health.js';
-import systemRouter from './routes/system.js';
-import botsRouter from './routes/bots.js';
-import conversationRouter from './routes/conversations.js';
+import healthRouter from './routes/health.route.js';
+import systemRouter from './routes/system.route.js';
+import botsRouter from './routes/bots.route.js';
+import conversationRouter from './routes/conversations.route.js';
 
 const app = express();
 

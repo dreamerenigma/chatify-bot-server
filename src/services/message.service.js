@@ -12,10 +12,7 @@ function getConversationRef(botId, conversationId) {
     throw new Error('Не указан идентификатор диалога.');
   }
 
-  return bots
-    .doc(botId)
-    .collection('conversations')
-    .doc(conversationId);
+  return bots.doc(botId).collection('conversations').doc(conversationId);
 }
 
 function toMessage(document) {
@@ -147,4 +144,83 @@ export async function updateMessageStatus({ botId, conversationId, messageId, st
     id: messageId,
     status,
   };
+}
+
+export async function updateMessageContent({botId, conversationId, messageId, callbackData, text, metadata}) {
+  if (typeof messageId !== 'string' || !messageId.trim()) {
+    throw new Error('Не указан идентификатор сообщения.');
+  }
+
+  if (typeof callbackData !== 'string' || !callbackData.trim()) {
+    throw new Error('Не указан callbackData.');
+  }
+
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new Error('Текст сообщения не может быть пустым.');
+  }
+
+  if (metadata != null && typeof metadata !== 'object') {
+    throw new Error('Некорректные метаданные сообщения.');
+  }
+
+  const conversationRef = getConversationRef(botId, conversationId);
+  const messageRef = conversationRef.collection('messages').doc(messageId);
+
+  await db.runTransaction(async (transaction) => {
+    const [conversationDocument, messageDocument] = await Promise.all([
+      transaction.get(conversationRef),
+      transaction.get(messageRef),
+    ]);
+
+    if (!conversationDocument.exists) {
+      const error = new Error('Диалог не найден.');
+      error.code = 'CONVERSATION_NOT_FOUND';
+      throw error;
+    }
+
+    if (!messageDocument.exists) {
+      const error = new Error('Сообщение не найдено.');
+      error.code = 'MESSAGE_NOT_FOUND';
+      throw error;
+    }
+
+    const currentMessage = messageDocument.data();
+
+    if (currentMessage.senderType !== 'bot'|| currentMessage.senderId !== botId) {
+      const error = new Error('Нельзя изменить это сообщение.');
+      error.code = 'MESSAGE_UPDATE_FORBIDDEN';
+      throw error;
+    }
+
+    const buttons = currentMessage.metadata?.keyboard?.buttons ?? [];
+
+    const callbackExists = buttons.some(
+      (button) => button.callbackData === callbackData
+    );
+
+    if (!callbackExists) {
+      const error = new Error('Недействительный callback.');
+      error.code = 'INVALID_CALLBACK';
+      throw error;
+    }
+
+    transaction.update(messageRef, {
+      text: text.trim(),
+      metadata: metadata ?? {},
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const conversation = conversationDocument.data();
+
+    if (conversation.lastMessage === currentMessage.text) {
+      transaction.update(conversationRef, {
+        lastMessage: text.trim(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  });
+
+  const updatedDocument = await messageRef.get();
+
+  return toMessage(updatedDocument);
 }

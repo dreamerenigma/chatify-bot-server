@@ -4,12 +4,97 @@ import { requireAuth } from '../config/middleware/auth.js';
 import { handleCommand } from '../commands/command.handler.js';
 import { getMasterBot } from '../services/master-bot.service.js';
 import { getOrCreateConversation } from '../services/conversation.service.js';
-import { createMessage, getMessages, updateMessageStatus } from '../services/message.service.js';
+import { createMessage, getMessages, updateMessageStatus, updateMessageContent } from '../services/message.service.js';
+import { handleMyBotsCommand, handleMyBotMenu } from '../commands/mybots.command.js';
+import { getConversation } from '../services/conversation.service.js';
 
 const router = Router();
 const bots = db.collection('Bots');
 
 router.use(requireAuth);
+
+router.post('/mybots/callback', async (req, res) => {
+  try {
+    const uid = req.user.uid;
+
+    const {
+      botId,
+      conversationId,
+      messageId,
+      callbackData,
+    } = req.body ?? {};
+
+    if (typeof botId !== 'string' || typeof conversationId !== 'string' || typeof messageId !== 'string' || typeof callbackData !== 'string') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Некорректные параметры callback.',
+      });
+    }
+
+    if (conversationId !== uid) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Нет доступа к этому диалогу.',
+      });
+    }
+
+    const bot = await checkBotAccess(uid, botId);
+
+    if (bot.isSystem !== true || bot.role !== 'orchestrator') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Эта операция недоступна.',
+      });
+    }
+
+    const conversation = await getConversation(botId, uid);
+
+    if (!conversation) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Диалог не найден.',
+      });
+    }
+
+    let result;
+
+    if (callbackData === 'mybots') {
+      result = await handleMyBotsCommand({
+        userId: uid,
+      });
+    } else {
+      const match = callbackData.match(/^mybot:([^:]+)$/);
+
+      if (match) {
+        result = await handleMyBotMenu({
+          userId: uid,
+          botId: match[1],
+        });
+      } else {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Неизвестное действие.',
+        });
+      }
+    }
+
+    const updatedMessage = await updateMessageContent({
+      botId,
+      conversationId,
+      messageId,
+      callbackData,
+      text: result.text,
+      metadata: result.metadata ?? {},
+    });
+
+    return res.json({
+      status: 'ok',
+      message: updatedMessage,
+    });
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
 
 async function checkBotAccess(uid, botId) {
   const masterBot = await getMasterBot();
@@ -207,6 +292,57 @@ router.get('/:botId/messages', async (req, res) => {
       status: 'ok',
       conversation,
       messages,
+    });
+  } catch (error) {
+    return handleError(error, res);
+  }
+});
+
+router.post('/mybots/callback', async (req, res) => {
+  try {
+    const { uid } = req.user;
+    const { callbackData, botId, conversationId, messageId } = req.body ?? {};
+
+    if (!callbackData || !conversationId || !messageId) {
+      return res.status(400).json({
+        error: 'validation_error',
+        message: 'Не переданы обязательные параметры.',
+      });
+    }
+
+    let result;
+
+    if (callbackData === 'mybots') {
+      result = await handleMyBotsCommand({
+        userId: uid,
+      });
+    } else {
+      const parts = callbackData.split(':');
+
+      if (parts[0] === 'mybot' && parts.length === 2) {
+        result = await handleMyBotMenu({
+          userId: uid,
+          botId: parts[1],
+        });
+      } else {
+        return res.status(400).json({
+          error: 'unknown_callback',
+          message: 'Неизвестное действие.',
+        });
+      }
+    }
+
+    const updatedMessage = await updateMessage({
+      botId,
+      conversationId,
+      messageId,
+      text: result.text,
+      metadata: result.metadata ?? null,
+    });
+
+    return res.json({
+      status: 'ok',
+      message: updatedMessage,
     });
   } catch (error) {
     return handleError(error, res);

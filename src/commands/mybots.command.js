@@ -1,4 +1,11 @@
-import { getUserBots } from '../services/bot.service.js';
+import { getUserBots, getBotById } from '../services/bot.service.js';
+
+function toCamelCase(username) {
+  return username
+    .split(/[_\-\s]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('');
+}
 
 export async function handleMyBotsCommand(context) {
   const { userId } = context;
@@ -30,6 +37,53 @@ export async function handleMyBotsCommand(context) {
         type: 'inline',
         columns: 2,
         buttons,
+      },
+    },
+  };
+}
+
+export async function handleMyBotMenu(context) {
+  const { userId, botId } = context;
+  const bot = await getBotById(userId, botId);
+  const username = toCamelCase(bot.username);
+
+  return {
+    text: `${bot.name}\n@${username}`,
+    metadata: {
+      keyboard: {
+        type: 'inline',
+        columns: 2,
+        buttons: [
+          {
+            text: 'API Token',
+            callbackData: `mybot:token:${bot.id}`,
+          },
+          {
+            text: 'Edit Bot',
+            callbackData: `mybot:edit:${bot.id}`,
+          },
+          {
+            text: 'Bot Settings',
+            callbackData: `mybot:settings:${bot.id}`,
+          },
+          {
+            text: 'Payments',
+            callbackData: `mybot:payments:${bot.id}`,
+          },
+          {
+            text: 'Transfer Ownership',
+            callbackData: `mybot:transfer:${bot.id}`,
+          },
+          {
+            text: 'Delete Bot',
+            callbackData: `mybot:delete:${bot.id}`,
+          },
+          {
+            text: '⬅ Back to Bot List',
+            callbackData: 'mybots',
+            colSpan: 2,
+          },
+        ],
       },
     },
   };
