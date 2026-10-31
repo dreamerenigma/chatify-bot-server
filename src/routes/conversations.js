@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../config/firebase.js';
 import { requireAuth } from '../config/middleware/auth.js';
+import { handleCommand } from '../commands/command.handler.js';
 import { getMasterBot } from '../services/master-bot.service.js';
 import { getOrCreateConversation } from '../services/conversation.service.js';
 import { createMessage, getMessages } from '../services/message.service.js';
@@ -129,8 +130,7 @@ router.post('/:botId/messages', async (req, res) => {
       throw error;
     }
 
-    await checkBotAccess(uid, botId);
-
+    const bot = await checkBotAccess(uid, botId);
     const conversation = await getOrCreateConversation(botId, uid);
 
     const message = await createMessage({
@@ -142,20 +142,38 @@ router.post('/:botId/messages', async (req, res) => {
       type: 'text',
     });
 
+    let botMessage = null;
+
+    if (bot.isSystem === true && bot.role === 'orchestrator') {
+      const result = await handleCommand({
+        botId,
+        conversationId: conversation.id,
+        userId: uid,
+        text,
+      });
+
+      if (result.handled && result.response?.text) {
+        botMessage = await createMessage({
+          botId,
+          conversationId: conversation.id,
+          senderId: bot.id,
+          senderType: 'bot',
+          text: result.response.text,
+          type: 'text',
+        });
+      }
+    }
+
     return res.status(201).json({
       status: 'ok',
       message,
+      botMessage,
     });
   } catch (error) {
     return handleError(error, res);
   }
 });
 
-/**
- * Получение истории сообщений.
- *
- * GET /conversations/:botId/messages
- */
 router.get('/:botId/messages', async (req, res) => {
   try {
     const { botId } = req.params;
