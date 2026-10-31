@@ -27,8 +27,12 @@ async function initMasterBot() {
   const existingQuery = await botsRef
     .where('username', '==', MASTER_BOT_USERNAME)
     .where('isSystem', '==', true)
-    .limit(1)
+    .limit(2)
     .get();
+
+  if (existingQuery.size > 1) {
+    throw new Error('Обнаружено несколько системных MasterBot. Проверьте коллекцию Bots.');
+  }
 
   let botRef;
 

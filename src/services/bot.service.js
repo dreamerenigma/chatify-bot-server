@@ -220,18 +220,8 @@ export async function addBotUser(uid, botId) {
 export async function updateBot(uid, botId, input) {
   assertRegularBot(input);
 
-  const updates = {};
-
-  for (const field of editableFields) {
-    if (Object.hasOwn(input, field)) {
-      updates[field] = input[field];
-    }
-  }
-
-  if (Object.keys(updates).length === 0) {
-    throw createError('Нет допустимых полей для обновления.', 'VALIDATION_ERROR');
-  }
-
+  const updates = validateBotUpdates(input);
+  
   const botRef = bots.doc(botId);
 
   await db.runTransaction(async (transaction) => {

@@ -3,12 +3,7 @@ import { db } from '../config/firebase.js';
 const MASTER_BOT_USERNAME = 'masterbot';
 
 export async function getMasterBot() {
-  const snapshot = await db
-    .collection('Bots')
-    .where('username', '==', MASTER_BOT_USERNAME)
-    .where('isSystem', '==', true)
-    .limit(2)
-    .get();
+  const snapshot = await db.collection('Bots').where('username', '==', MASTER_BOT_USERNAME).where('isSystem', '==', true).limit(2).get();
 
   if (snapshot.empty) {
     const error = new Error('MasterBot не найден.');
