@@ -12,22 +12,22 @@ function getUsernamePrompt() {
 
 function getSuccessMessage(bot) {
   return (
-    `Done! Congratulations on your new bot. ` +
-    `You will find it at https://chatify.ru/${bot.username}. ` +
-    `You can now add a description, about section and profile picture ` +
-    `to your bot, see /help for a list of commands.\n\n` +
+    `Готово! Поздравляем с созданием нового бота🎉. ` +
+    `Вы найдете бота по адресу: https://chatify.ru/${bot.username}. ` +
+    `Теперь вы можете добавить описание, раздел «О нас» и фотографию профиля. ` +
+    `Чтобы связаться с вашим ботом, см. /help для списка команд.n\n` +
 
-    `By the way, when you've finished creating your cool bot, ` +
-    `ping our Bot Support if you want a better username for it. ` +
-    `Just make sure the bot is fully operational before you do this.\n\n` +
+    `Кстати, когда закончите создание своего классного бота, ` +
+    `напишите в нашу службу поддержки ботов, если захотите подобрать для него более удачное имя пользователя. ` +
+    `Только убедитесь, что бот полностью готов к работе, прежде чем обращаться к нам.\n\n` +
 
-    `Use this token to access the HTTP API:\n` +
+    `Используйте этот токен для доступа к HTTP API:\n` +
     `\`${bot.token}\`\n\n` +
 
-    `Keep your token **secure** and **store it safely**, ` +
-    `it can be used by anyone to control your bot.\n\n` +
+    `Храните свой токен в **безопасности** и **обеспечьте его надежное хранение**, ` +
+    `любой человек может использовать это для управления вашим ботом.\n\n` +
 
-    `For a description of the Bot API, see this page: ` +
+    `Описание Bot API можно найти на этой странице: ` +
     `https://core.chatify.org/bots/api`
   );
 }
