@@ -4,7 +4,7 @@ import { requireAuth } from '../config/middleware/auth.js';
 import { handleCommand } from '../commands/command.handler.js';
 import { getMasterBot } from '../services/master-bot.service.js';
 import { getOrCreateConversation } from '../services/conversation.service.js';
-import { createMessage, getMessages } from '../services/message.service.js';
+import { createMessage, getMessages, updateMessageStatus } from '../services/message.service.js';
 
 const router = Router();
 const bots = db.collection('Bots');
@@ -113,11 +113,6 @@ function handleError(error, res) {
   }
 }
 
-/**
- * Отправка сообщения в диалог с ботом.
- *
- * POST /conversations/:botId/messages
- */
 router.post('/:botId/messages', async (req, res) => {
   try {
     const { botId } = req.params;
@@ -145,6 +140,20 @@ router.post('/:botId/messages', async (req, res) => {
     let botMessage = null;
 
     if (bot.isSystem === true && bot.role === 'orchestrator') {
+      await updateMessageStatus({
+        botId,
+        conversationId: conversation.id,
+        messageId: message.id,
+        status: 'delivered',
+      });
+
+      await updateMessageStatus({
+        botId,
+        conversationId: conversation.id,
+        messageId: message.id,
+        status: 'read',
+      });
+
       const result = await handleCommand({
         botId,
         conversationId: conversation.id,

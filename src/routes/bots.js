@@ -30,7 +30,6 @@ function handleError(error, res) {
   });
 }
 
-// -- Get the current user's bots.
 router.get('/', async (req, res) => {
   try {
     const bots = await getUserBots(req.user.uid);
@@ -40,7 +39,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-/// -- Get a specific bot.
 router.get('/:botId', async (req, res) => {
   try {
     const bot = await getBotById(req.user.uid, req.params.botId);
@@ -50,7 +48,6 @@ router.get('/:botId', async (req, res) => {
   }
 });
 
-/// -- Create bot.
 router.post('/', async (req, res) => {
   try {
     const bot = await createBot(req.user.uid, req.body ?? {});
@@ -60,7 +57,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-/// -- Update bot.
 router.patch('/:botId', async (req, res) => {
   try {
     const bot = await updateBot(req.user.uid, req.params.botId, req.body ?? {});
@@ -71,7 +67,6 @@ router.patch('/:botId', async (req, res) => {
   }
 });
 
-/// -- Delete bot.
 router.delete('/:botId', async (req, res) => {
   try {
     await deleteBot(req.user.uid, req.params.botId);
@@ -81,7 +76,6 @@ router.delete('/:botId', async (req, res) => {
   }
 });
 
-/// -- Add user bot.
 router.post('/:botId/add-user', async (req, res) => {
   try {
     const bot = await addBotUser(req.user.uid, req.params.botId);

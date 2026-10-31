@@ -26,9 +26,6 @@ function toSession(document) {
   };
 }
 
-/**
- * Получить текущую сессию пользователя.
- */
 export async function getCurrentSession(botId, conversationId) {
   const sessionRef = getSessionRef(botId, conversationId);
   const document = await sessionRef.get();
@@ -36,9 +33,6 @@ export async function getCurrentSession(botId, conversationId) {
   return toSession(document);
 }
 
-/**
- * Создать новую сессию.
- */
 export async function createSession({botId,conversationId,command, step, data = {}}) {
   if (typeof command !== 'string' || !command.trim()) {
     throw new Error('Не указана команда сессии.');
@@ -75,10 +69,6 @@ export async function createSession({botId,conversationId,command, step, data = 
   return getCurrentSession(botId, conversationId);
 }
 
-/**
- * Обновить текущую сессию.
- * Переданные data объединяются с уже сохранёнными данными.
- */
 export async function updateSession({botId,conversationId,step, data}) {
   const sessionRef = getSessionRef(botId, conversationId);
 
@@ -122,9 +112,6 @@ export async function updateSession({botId,conversationId,step, data}) {
   return getCurrentSession(botId, conversationId);
 }
 
-/**
- * Удалить текущую сессию.
- */
 export async function deleteSession(botId, conversationId) {
   const sessionRef = getSessionRef(botId, conversationId);
 

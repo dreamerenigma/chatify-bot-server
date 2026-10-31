@@ -29,16 +29,7 @@ function toMessage(document) {
   };
 }
 
-/// -- Создаёт сообщение в диалоге с ботом.
-export async function createMessage({
-  botId,
-  conversationId,
-  senderId,
-  senderType,
-  text,
-  type = 'text',
-  metadata,
-}) {
+export async function createMessage({botId, conversationId, senderId, senderType, text, type = 'text', metadata}) {
   if (typeof senderId !== 'string' || !senderId.trim()) {
     throw new Error('Не указан отправитель сообщения.');
   }
@@ -64,6 +55,7 @@ export async function createMessage({
     senderType,
     text: text.trim(),
     type,
+    status: 'sent',
     createdAt: FieldValue.serverTimestamp(),
   };
 
@@ -94,7 +86,6 @@ export async function createMessage({
   return toMessage(document);
 }
 
-/// -- Получает сообщения диалога.
 export async function getMessages(botId, conversationId, limit = 50) {
   const conversationRef = getConversationRef(botId, conversationId);
 
@@ -109,4 +100,51 @@ export async function getMessages(botId, conversationId, limit = 50) {
   const snapshot = await conversationRef.collection('messages').orderBy('createdAt', 'asc').limit(limit).get();
 
   return snapshot.docs.map(toMessage);
+}
+
+export async function updateMessageStatus({ botId, conversationId, messageId, status}) {
+  const allowedStatuses = [
+    'sending',
+    'sent',
+    'delivered',
+    'read',
+    'failed',
+  ];
+
+  if (!allowedStatuses.includes(status)) {
+    throw new Error('Некорректный статус сообщения.');
+  }
+
+  const conversationRef = getConversationRef(botId, conversationId);
+  const messageRef = conversationRef.collection('messages').doc(messageId);
+
+  const updateData = {
+    status,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  if (status === 'delivered') {
+    updateData.deliveredAt = FieldValue.serverTimestamp();
+  }
+
+  if (status === 'read') {
+    updateData.readAt = FieldValue.serverTimestamp();
+  }
+
+  await db.runTransaction(async (transaction) => {
+    const document = await transaction.get(messageRef);
+
+    if (!document.exists) {
+      const error = new Error('Сообщение не найдено.');
+      error.code = 'MESSAGE_NOT_FOUND';
+      throw error;
+    }
+
+    transaction.update(messageRef, updateData);
+  });
+
+  return {
+    id: messageId,
+    status,
+  };
 }

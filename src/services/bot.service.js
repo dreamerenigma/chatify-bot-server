@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { db } from '../config/firebase.js';
 import { syncBotSearchIndex, deleteBotSearchIndex } from './search-index.service.js';
+import { createHash, randomBytes } from 'node:crypto';
 
 const bots = db.collection('Bots');
 
@@ -24,13 +25,13 @@ function createError(message, code) {
 
 function normalizeUsername(value) {
   if (typeof value !== 'string') {
-    throw createError('Поле username должно быть строкой.','VALIDATION_ERROR');
+    throw createError( 'Поле username должно быть строкой.', 'VALIDATION_ERROR');
   }
 
   const username = value.trim().toLowerCase();
 
-  if (!/^[a-z0-9_]{3,30}$/.test(username)) {
-    throw createError('Username должен содержать от 3 до 30 символов: a-z, 0-9 или _.', 'VALIDATION_ERROR');
+  if (!/^[a-z][a-z0-9_]{4,30}bot$/.test(username)) {
+    throw createError('Некорректный username.', 'VALIDATION_ERROR');
   }
 
   return username;
@@ -142,41 +143,85 @@ export async function getBotById(uid, botId) {
 }
 
 export async function createBot(uid, input) {
-  assertRegularBot(input);
-
-  if (typeof input.name !== 'string' || !input.name.trim() || typeof input.username !== 'string' || !input.username.trim()) {
-    throw createError('Поля name и username обязательны.', 'VALIDATION_ERROR');
+  if (typeof uid !== 'string' || !uid.trim()) {
+    throw createError('Не указан владелец бота.', 'VALIDATION_ERROR');
   }
 
+  if (!input || typeof input !== 'object') {
+    throw createError('Некорректные данные бота.', 'VALIDATION_ERROR');
+  }
+
+  if (
+    typeof input.name !== 'string' ||
+    input.name.trim().length < 3 ||
+    input.name.trim().length > 64
+  ) {
+    throw createError('Название должно содержать от 3 до 64 символов.', 'VALIDATION_ERROR');
+  }
+
+  const name = input.name.trim();
+  const username = normalizeUsername(input.username);
+
   const botRef = bots.doc();
+  const usernameRef = db.collection('BotUsernames').doc(username);
+
+  const secret = randomBytes(32).toString('hex');
+  const token = `chatify_${botRef.id}_${secret}`;
+
+  const tokenHash = createHash('sha256').update(token).digest('hex');
 
   const data = {
-    name: input.name.trim(),
-    username: input.username.trim(),
-    description: typeof input.description === 'string' ? input.description : '',
-    type: typeof input.type === 'string' ? input.type : 'general',
+    id: botRef.id,
+    name,
+    username,
+    description: '',
+    type: 'general',
     role: 'standard',
-    avatar: input.avatar ?? null,
+    avatar: null,
     ownerId: uid,
     ownerType: 'user',
     managedBotIds: [],
     platforms: ['chatify'],
     capabilities: ['messaging'],
+    isSystem: false,
     isActive: true,
     isVerified: false,
     usersCount: 0,
-    id: botRef.id,
+    tokenHash,
     createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   };
 
-  await botRef.create(data);
+  await db.runTransaction(async (transaction) => {
+    const usernameDocument = await transaction.get(usernameRef);
+
+    if (usernameDocument.exists) {
+      throw createError( 'Этот username уже занят. Выберите другой.', 'USERNAME_TAKEN');
+    }
+
+    const existingBots = await transaction.get(bots.where('username', '==', username));
+
+    if (!existingBots.empty) {
+      throw createError('Этот username уже занят. Выберите другой.', 'USERNAME_TAKEN');
+    }
+
+    transaction.create(botRef, data);
+
+    transaction.create(usernameRef, {
+      botId: botRef.id,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
 
   const createdDocument = await botRef.get();
   const bot = toBot(createdDocument);
 
   await syncBotSearchIndex(bot);
 
-  return bot;
+  return {
+    ...bot,
+    token,
+  };
 }
 
 export async function addBotUser(uid, botId) {

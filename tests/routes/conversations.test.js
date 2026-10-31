@@ -79,7 +79,7 @@ test('POST /conversations/:botId/messages saves user message and creates bot rep
   assert.equal(botMessage.conversationId, userId);
   assert.equal(botMessage.senderId, masterBot.id);
   assert.equal(botMessage.senderType, 'bot');
-  assert.match(botMessage.text, /Введите имя вашего бота/);
+  assert.equal(botMessage.text, 'Итак, новый бот. Как мы его назовём? Пожалуйста, выберите имя для своего бота.');
 
   const messageDocument = await conversationRef.collection('messages').doc(message.id).get();
 
@@ -125,10 +125,10 @@ test('GET /conversations/:botId/messages returns conversation history', async ()
   assert.equal(response.body.status, 'ok');
 
   assert.equal(response.body.conversation.id, userId);
-
   assert.equal(response.body.messages.length, 2);
 
   const userMessage = response.body.messages.find((message) => message.senderType === 'user');
+
   const botMessage = response.body.messages.find((message) => message.senderType === 'bot');
 
   assert.ok(userMessage);
@@ -139,33 +139,34 @@ test('GET /conversations/:botId/messages returns conversation history', async ()
   assert.equal(userMessage.type, 'text');
 
   assert.equal(botMessage.senderId, masterBot.id);
-  assert.match(botMessage.text, /Введите имя вашего бота/);
+  assert.match(botMessage.text, /Как мы его назовём/);
 });
 
-test('POST /conversations/:botId/messages completes the newbot flow up to username acceptance', async () => {
+test('POST /conversations/:botId/messages completes the newbot flow', async () => {
   const sendMessage = (text) => request(app).post(`/conversations/${masterBot.id}/messages`).set('Authorization', `Bearer ${TEST_TOKEN}`).send({ text });
 
   const startResponse = await sendMessage('/newbot');
 
   assert.equal(startResponse.status, 201);
   assert.equal(startResponse.body.message.text, '/newbot');
-  assert.match(startResponse.body.botMessage.text, /Введите имя вашего бота/);
+
+  assert.match(startResponse.body.botMessage.text, /Как мы его назовём/);
 
   let sessionDocument = await sessionRef.get();
 
   assert.ok(sessionDocument.exists);
   assert.equal(sessionDocument.data().command, 'newbot');
   assert.equal(sessionDocument.data().step, 'waiting_for_name');
-
   const nameResponse = await sendMessage('Chatify Helper');
 
   assert.equal(nameResponse.status, 201);
   assert.equal(nameResponse.body.message.text, 'Chatify Helper');
-  assert.match(nameResponse.body.botMessage.text, /Chatify Helper/);
-  assert.match(nameResponse.body.botMessage.text, /username/);
+
+  assert.match(nameResponse.body.botMessage.text, /выберем имя пользователя/);
 
   sessionDocument = await sessionRef.get();
 
+  assert.ok(sessionDocument.exists);
   assert.equal(sessionDocument.data().step, 'waiting_for_username');
   assert.equal(sessionDocument.data().data.name, 'Chatify Helper');
 
@@ -173,18 +174,16 @@ test('POST /conversations/:botId/messages completes the newbot flow up to userna
 
   assert.equal(usernameResponse.status, 201);
   assert.equal(usernameResponse.body.message.text, 'ChatifyHelperBot');
-  assert.match(usernameResponse.body.botMessage.text, /ChatifyHelperBot/);
+
+  assert.match(usernameResponse.body.botMessage.text, /Congratulations on your new bot/);
+
+  assert.match(usernameResponse.body.botMessage.text, /You will find it at https:\/\/.+\/chatifyhelperbot\./);
+
+  assert.match(usernameResponse.body.botMessage.text, /chatify_[a-zA-Z0-9]+_[a-f0-9]{64}/);
 
   sessionDocument = await sessionRef.get();
 
-  assert.ok(sessionDocument.exists);
-
-  const session = sessionDocument.data();
-
-  assert.equal(session.command, 'newbot');
-  assert.equal(session.step, 'checking_username');
-  assert.equal(session.data.name, 'Chatify Helper');
-  assert.equal(session.data.username, 'ChatifyHelperBot');
+  assert.equal(sessionDocument.exists, false);
 
   const messages = await conversationRef.collection('messages').get();
 

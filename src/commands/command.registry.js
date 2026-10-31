@@ -1,13 +1,19 @@
 import { handleNewBotCommand } from './newbot.command.js';
+import { handleCancelCommand } from './cancel.command.js';
+import { handleMyBotsCommand } from './mybots.command.js';
 
 const commands = new Map([
   [
     'newbot',
-    {
-      name: 'newbot',
-      description: 'Создать нового бота',
-      handler: handleNewBotCommand,
-    },
+    { name: 'newbot', description: 'Создать нового бота', handler: handleNewBotCommand },
+  ],
+  [
+    'cancel',
+    { name: 'cancel', description: 'Отменить текущее действие', handler: handleCancelCommand },
+  ],
+  [
+    'mybots',
+    { name: 'mybots', description: 'Мои боты', handler: handleMyBotsCommand },
   ],
 ]);
 

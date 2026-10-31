@@ -26,17 +26,36 @@ function parseCommand(text) {
 }
 
 export async function handleCommand({botId, conversationId, userId, text}) {
-  if (!botId || !conversationId || !userId) {
-    throw new Error('Не переданы обязательные параметры обработки команды.');
+  if (typeof botId !== 'string' || typeof conversationId !== 'string' || typeof userId !== 'string' || typeof text !== 'string' || !text.trim()) {
+    return { handled: false };
   }
 
-  if (typeof text !== 'string' || !text.trim()) {
+  const commandName = parseCommand(text);
+  const session = await getCurrentSession(botId, conversationId);
+
+  if (commandName === 'cancel') {
+    const command = getCommand('cancel');
+
+    if (!command) {
+      return {
+        handled: true,
+        response: {
+          text: 'Команда /cancel временно недоступна.',
+        },
+      };
+    }
+
     return {
-      handled: false,
+      handled: true,
+      response: await command.handler({
+        botId,
+        conversationId,
+        userId,
+        text: text.trim(),
+        session,
+      }),
     };
   }
-
-  const session = await getCurrentSession(botId, conversationId);
 
   if (session) {
     const command = getCommand(session.command);
@@ -64,12 +83,8 @@ export async function handleCommand({botId, conversationId, userId, text}) {
     };
   }
 
-  const commandName = parseCommand(text);
-
   if (!commandName) {
-    return {
-      handled: false,
-    };
+    return { handled: false };
   }
 
   const command = getCommand(commandName);
@@ -85,16 +100,14 @@ export async function handleCommand({botId, conversationId, userId, text}) {
     };
   }
 
-  const response = await command.handler({
-    botId,
-    conversationId,
-    userId,
-    text: text.trim(),
-    session: null,
-  });
-
   return {
     handled: true,
-    response,
+    response: await command.handler({
+      botId,
+      conversationId,
+      userId,
+      text: text.trim(),
+      session: null,
+    }),
   };
 }

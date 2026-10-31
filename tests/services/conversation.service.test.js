@@ -11,7 +11,6 @@ const cleanupRefs = [];
 
 let activeBotId;
 
-/// -- Создаём временного активного бота перед тестами.
 before(async () => {
   const botRef = bots.doc(`test_${randomUUID()}`);
 
@@ -26,14 +25,12 @@ before(async () => {
   activeBotId = botRef.id;
 });
 
-/// -- Удаляем все тестовые документы после выполнения тестов.
 after(async () => {
   for (const ref of [...cleanupRefs].reverse()) {
     await ref.delete();
   }
 });
 
-/// -- Создаёт уникального тестового пользователя и регистрирует ссылку на его диалог для очистки.
 function createTestConversation() {
   const userId = `test_${randomUUID()}`;
 
@@ -47,7 +44,6 @@ function createTestConversation() {
   };
 }
 
-/// -- Создание нового диалога.
 test('getOrCreateConversation creates a new conversation', async () => {
   const { userId } = createTestConversation();
 
@@ -67,7 +63,6 @@ test('getOrCreateConversation creates a new conversation', async () => {
   assert.ok(conversation.updatedAt);
 });
 
-/// -- Тест 2. Получение существующего диалога.
 test('getConversation returns an existing conversation', async () => {
   const { userId } = createTestConversation();
 
@@ -81,7 +76,6 @@ test('getConversation returns an existing conversation', async () => {
   assert.equal(conversation.userId, userId);
 });
 
-/// -- Тест 3. Повторное создание не должно изменять существующий диалог.
 test('getOrCreateConversation does not duplicate an existing conversation', async () => {
   const { userId } = createTestConversation();
 
@@ -98,7 +92,6 @@ test('getOrCreateConversation does not duplicate an existing conversation', asyn
   assert.equal(document.exists, true);
 });
 
-/// -- Тест 4. Несуществующий бот.
 test('getOrCreateConversation throws BOT_NOT_FOUND for a missing bot', async () => {
   const missingBotId = `missing_${randomUUID()}`;
   const userId = `test_${randomUUID()}`;
@@ -106,7 +99,6 @@ test('getOrCreateConversation throws BOT_NOT_FOUND for a missing bot', async () 
   await assert.rejects(getOrCreateConversation(missingBotId, userId), (error) => error.code === 'BOT_NOT_FOUND');
 });
 
-/// -- Тест 5. Неактивный бот.
 test('getOrCreateConversation throws BOT_INACTIVE for an inactive bot', async () => {
   const inactiveBotRef = bots.doc(`test_${randomUUID()}`);
 
@@ -123,7 +115,6 @@ test('getOrCreateConversation throws BOT_INACTIVE for an inactive bot', async ()
   await assert.rejects(getOrCreateConversation(inactiveBotRef.id, userId), (error) => error.code === 'BOT_INACTIVE');
 });
 
-/// -- Тест 6. Получение несуществующего диалога.
 test('getConversation returns null when conversation does not exist', async () => {
   const userId = `test_${randomUUID()}`;
 
