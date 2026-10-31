@@ -24,10 +24,13 @@ export async function handleMyBotsCommand(context) {
   }));
 
   return {
-    text: 'Choose a bot from the list below:',
-    keyboard: {
-      columns: 2,
-      buttons,
+    text: 'Выберите бота из списка ниже:',
+    metadata: {
+      keyboard: {
+        type: 'inline',
+        columns: 2,
+        buttons,
+      },
     },
   };
 }

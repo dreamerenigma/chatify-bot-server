@@ -169,6 +169,7 @@ router.post('/:botId/messages', async (req, res) => {
           senderType: 'bot',
           text: result.response.text,
           type: 'text',
+          metadata: result.response.metadata,
         });
       }
     }

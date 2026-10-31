@@ -33,7 +33,7 @@ export async function getCurrentSession(botId, conversationId) {
   return toSession(document);
 }
 
-export async function createSession({botId,conversationId,command, step, data = {}}) {
+export async function createSession({botId, conversationId, command, step, data = {}}) {
   if (typeof command !== 'string' || !command.trim()) {
     throw new Error('Не указана команда сессии.');
   }

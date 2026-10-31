@@ -24,11 +24,7 @@ const masterBot = {
 async function initMasterBot() {
   const botsRef = db.collection('Bots');
 
-  const existingQuery = await botsRef
-    .where('username', '==', MASTER_BOT_USERNAME)
-    .where('isSystem', '==', true)
-    .limit(2)
-    .get();
+  const existingQuery = await botsRef.where('username', '==', MASTER_BOT_USERNAME).where('isSystem', '==', true).limit(2).get();
 
   if (existingQuery.size > 1) {
     throw new Error('Обнаружено несколько системных MasterBot. Проверьте коллекцию Bots.');
@@ -54,9 +50,7 @@ async function initMasterBot() {
       {
         ...masterBot,
         id: botRef.id,
-        createdAt: snapshot.exists && snapshot.data().createdAt
-          ? snapshot.data().createdAt
-          : FieldValue.serverTimestamp(),
+        createdAt: snapshot.exists && snapshot.data().createdAt ? snapshot.data().createdAt : FieldValue.serverTimestamp(),
       },
       { merge: true },
     );

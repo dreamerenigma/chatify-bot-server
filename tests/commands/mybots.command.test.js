@@ -71,12 +71,16 @@ test('handleMyBotsCommand returns only regular bots belonging to the user', asyn
 
   const result = await handleMyBotsCommand({ userId });
 
-  assert.match(result.text, /Ваши боты \(2\)/);
-  assert.match(result.text, /Weather Bot/);
-  assert.match(result.text, /@weather_bot/);
-  assert.match(result.text, /News Bot/);
-  assert.match(result.text, /@news_bot/);
+  assert.equal(result.text, 'Выберите бота из списка ниже:');
 
-  assert.doesNotMatch(result.text, /Another User Bot/);
-  assert.doesNotMatch(result.text, /MasterBot/);
+  const buttons = result.metadata.keyboard.buttons;
+
+  assert.equal(buttons.length, 2);
+
+  assert.deepEqual(buttons.map((button) => button.text).sort(), ['@news_bot', '@weather_bot'].sort());
+
+  assert.deepEqual(
+    buttons.map((button) => button.callbackData).sort(),
+    buttons.map((button) => `mybot:${button.callbackData.split(':')[1]}`).sort()
+  );
 });

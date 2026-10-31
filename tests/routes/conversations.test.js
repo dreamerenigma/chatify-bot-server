@@ -50,6 +50,20 @@ afterEach(async () => {
 
   batch.delete(conversationRef);
 
+  const userBots = await bots.where('ownerId', '==', userId).get();
+
+  for (const botDocument of userBots.docs) {
+    const botData = botDocument.data();
+
+    if (botData.username) {
+      batch.delete(db.collection('BotUsernames') .doc(botData.username.toLowerCase()));
+    }
+
+    batch.delete(db.collection('global_search_index').doc(botDocument.id));
+
+    batch.delete(botDocument.ref);
+  }
+
   await batch.commit();
 });
 
@@ -175,9 +189,9 @@ test('POST /conversations/:botId/messages completes the newbot flow', async () =
   assert.equal(usernameResponse.status, 201);
   assert.equal(usernameResponse.body.message.text, 'ChatifyHelperBot');
 
-  assert.match(usernameResponse.body.botMessage.text, /Congratulations on your new bot/);
+  assert.match(usernameResponse.body.botMessage.text, /Поздравляем с созданием нового бота/);
 
-  assert.match(usernameResponse.body.botMessage.text, /You will find it at https:\/\/.+\/chatifyhelperbot\./);
+  assert.ok(usernameResponse.body.botMessage.text.includes('https://chatify.ru/chatifyhelperbot'), 'Response should contain the bot URL');
 
   assert.match(usernameResponse.body.botMessage.text, /chatify_[a-zA-Z0-9]+_[a-f0-9]{64}/);
 
